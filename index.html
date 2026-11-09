@@ -3,73 +3,162 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Happy Birthday!</title>
+  <title>Birthday Quest for My Wife</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     * {
       box-sizing: border-box;
-      font-family: 'Feather', 'Segoe UI', Arial, sans-serif;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }
+    
     body {
-      background-color: #131f24;
+      /* Градиент неба, уходящий в рассвет */
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+      background-size: 400% 400%;
+      animation: skyShift 15s ease infinite;
       color: #ffffff;
       margin: 0;
-      padding: 20px;
+      padding: 16px;
       display: flex;
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
       justify-content: space-between;
+      overflow-x: hidden;
+      position: relative;
     }
-    .header {
+
+    @keyframes skyShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* Фоновые плывущие облака */
+    .cloud {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 50px;
+      pointer-events: none;
+      animation: floatCloud linear infinite;
+    }
+    @keyframes floatCloud {
+      from { transform: translateX(-150px); }
+      to { transform: translateX(calc(100vw + 150px)); }
+    }
+
+    /* Игровая зона слежения за прогрессом (небо с птичкой) */
+    .sky-tracker {
       width: 100%;
       max-width: 400px;
+      height: 120px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 20px;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 15px;
       display: flex;
       align-items: center;
-      gap: 10px;
     }
-    .progress-bar {
-      flex-grow: 1;
-      height: 16px;
-      background: #37464f;
-      border-radius: 10px;
-      overflow: hidden;
+
+    /* Дорожка облаков внутри трекера */
+    .sky-path {
+      position: absolute;
+      bottom: 15px;
+      left: 20px;
+      right: 20px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 2px;
     }
-    .progress-fill {
-      height: 100%;
-      width: 0%;
-      background: #58cc02;
-      transition: width 0.3s ease;
+
+    /* Персонаж (сова с анимацией полёта) */
+    .mascot-container {
+      position: absolute;
+      left: 10px;
+      bottom: 20px;
+      font-size: 42px;
+      transition: left 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      animation: bounceMascot 2s ease-in-out infinite;
+      z-index: 5;
     }
-    .mascot {
-      font-size: 50px;
-      text-align: center;
-      margin: 15px 0;
+
+    @keyframes bounceMascot {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-8px) rotate(3deg); }
     }
-    .prompt-box {
-      background: #202f36;
-      border: 2px solid #37464f;
-      border-radius: 16px;
-      padding: 15px;
-      text-align: center;
+
+    .mascot-container.fly {
+      animation: flyUp 0.6s ease;
+    }
+
+    @keyframes flyUp {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.3) translateY(-15px) rotate(-10deg); }
+      100% { transform: scale(1) translateY(0) rotate(0deg); }
+    }
+
+    /* Подарок на финише в небе */
+    .sky-gift {
+      position: absolute;
+      right: 20px;
+      bottom: 22px;
+      font-size: 36px;
+      animation: pulseGift 1.5s ease-in-out infinite;
+    }
+    @keyframes pulseGift {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+
+    /* Полупрозрачные стеклянные панели (Glassmorphism) */
+    .glass-card {
+      background: rgba(20, 30, 45, 0.55);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      padding: 20px;
       width: 100%;
       max-width: 400px;
-      font-size: 18px;
-      margin-bottom: 20px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+      margin-bottom: 15px;
+      text-align: center;
     }
+
+    .prompt-text {
+      font-size: 16px;
+      color: #e2e8f0;
+      margin-bottom: 6px;
+    }
+
+    .target-ru {
+      font-size: 19px;
+      font-weight: 700;
+      color: #70f3ff;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    /* Поле для собранного предложения */
     .answer-line {
-      min-height: 60px;
-      border-bottom: 2px solid #37464f;
+      min-height: 65px;
+      background: rgba(10, 15, 25, 0.4);
+      border: 2px dashed rgba(255, 255, 255, 0.25);
+      border-radius: 16px;
       width: 100%;
       max-width: 400px;
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      padding: 5px;
+      padding: 10px;
       align-items: center;
-      margin-bottom: 25px;
+      margin-bottom: 15px;
     }
+
+    /* Пул доступных слов */
     .word-pool {
       display: flex;
       flex-wrap: wrap;
@@ -77,34 +166,42 @@
       justify-content: center;
       width: 100%;
       max-width: 400px;
+      margin-bottom: 20px;
     }
+
     .btn-word {
-      background: #202f36;
-      border: 2px solid #37464f;
-      border-bottom: 4px solid #37464f;
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-bottom: 3px solid rgba(0, 0, 0, 0.3);
       color: #fff;
       padding: 10px 16px;
       border-radius: 12px;
       font-size: 16px;
-      font-weight: bold;
+      font-weight: 600;
       cursor: pointer;
       user-select: none;
       transition: all 0.1s ease;
     }
+
     .btn-word:active {
       transform: translateY(2px);
-      border-bottom-width: 2px;
+      border-bottom-width: 1px;
     }
+
     .btn-word.used {
-      opacity: 0.2;
+      opacity: 0.15;
       pointer-events: none;
+      transform: scale(0.95);
     }
+
+    /* Кнопка проверки */
     .action-btn {
       width: 100%;
       max-width: 400px;
-      background: #58cc02;
+      background: linear-gradient(135deg, #58cc02, #419600);
       border: none;
-      border-bottom: 4px solid #46a302;
+      border-bottom: 4px solid #2e6a00;
       color: white;
       padding: 16px;
       border-radius: 16px;
@@ -113,60 +210,80 @@
       cursor: pointer;
       text-transform: uppercase;
       letter-spacing: 0.8px;
-      margin-top: 20px;
+      box-shadow: 0 4px 15px rgba(88, 204, 2, 0.4);
+      transition: all 0.1s ease;
     }
+
     .action-btn:active {
       transform: translateY(2px);
       border-bottom-width: 2px;
     }
+
+    /* Финальная открытка */
     .final-card {
       display: none;
       text-align: center;
-      background: #202f36;
-      border-radius: 20px;
-      padding: 25px;
+      background: rgba(20, 30, 45, 0.85);
+      backdrop-filter: blur(16px);
+      border-radius: 24px;
+      padding: 30px 20px;
       max-width: 400px;
+      width: 100%;
       border: 2px solid #58cc02;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    .final-card h1 { color: #58cc02; margin-top: 0; }
+
+    @keyframes popIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .final-card h1 { color: #58cc02; margin-top: 0; font-size: 28px; }
   </style>
 </head>
 <body>
 
-  <div class="header" id="header">
-    <span>❤️</span>
-    <div class="progress-bar">
-      <div class="progress-fill" id="progress"></div>
-    </div>
+  <!-- Динамические облака на фоне -->
+  <div class="cloud" style="width: 80px; height: 30px; top: 10%; animation-duration: 22s; animation-delay: -5s;"></div>
+  <div class="cloud" style="width: 120px; height: 45px; top: 35%; animation-duration: 35s; animation-delay: -2s;"></div>
+  <div class="cloud" style="width: 60px; height: 22px; top: 70%; animation-duration: 18s; animation-delay: -10s;"></div>
+
+  <!-- Верхняя панель: Трекер полета совы к облачному подарку -->
+  <div class="sky-tracker" id="tracker">
+    <div class="sky-path"></div>
+    <div class="sky-gift" title="Главный приз">🎁☁️</div>
+    <div class="mascot-container" id="mascot">🦉</div>
   </div>
 
+  <!-- Игровой интерфейс -->
   <div id="game-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
-    <div class="mascot" id="mascot">🦉</div>
-
-    <div class="prompt-box" id="prompt">
-      Переведи предложение на английский:
-      <div id="ru-text" style="font-weight: bold; margin-top: 8px; color: #1cb0f6;"></div>
+    
+    <div class="glass-card">
+      <div class="prompt-text">Собери фразу на английском:</div>
+      <div class="target-ru" id="ru-text"></div>
     </div>
 
     <div class="answer-line" id="answer-line"></div>
 
     <div class="word-pool" id="word-pool"></div>
 
-    <button class="action-btn" id="check-btn" onclick="checkAnswer()">Проверить</button>
+    <button class="action-btn" onclick="checkAnswer()">Проверить 🚀</button>
   </div>
 
+  <!-- Финальный блок (Подарок на облачке) -->
   <div class="final-card" id="final-card">
-    <div style="font-size: 60px;">🎉🎂🥳</div>
-    <h1>С Днём Рождения!</h1>
-    <p style="font-size: 18px; line-height: 1.5;">
-      Ты успешно прошла праздничный курс! ❤️<br><br>
-      Твой главный подарок ждёт тебя <b>на кухне</b> (горячий кофе и вкусный завтрак уже готовы)!
+    <div style="font-size: 65px; margin-bottom: 10px;">🧸🎈🎉</div>
+    <h1>Урок пройден!</h1>
+    <p style="font-size: 17px; line-height: 1.6; color: #cbd5e1;">
+      Ты успешно поднялась на вершину неба и собрала все заветные слова! ❤️<br><br>
+      Твой главный праздничный сюрприз уже ждёт тебя <b>на кухне</b> (горячий кофе, нежный завтрак и море обниманий уже готовы) ✨
     </p>
   </div>
 
   <script>
     const tg = window.Telegram.WebApp;
-    tg.expand(); // Разворачиваем на весь экран
+    tg.expand();
 
     const levels = [
       {
@@ -191,12 +308,13 @@
 
     function initLevel() {
       const level = levels[currentLevel];
-      document.getElementById('ru-text').innerText = `"${level.ru}"`;
+      document.getElementById('ru-text').innerText = `«${level.ru}»`;
       document.getElementById('answer-line').innerHTML = '';
-      document.getElementById('progress').style.width = `${(currentLevel / levels.length) * 100}%`;
       selectedWords = [];
 
-      // Собираем все слова и перемешиваем
+      updateMascotPosition();
+
+      // Перемешиваем слова
       const allWords = [...level.target, ...level.extraWords].sort(() => Math.random() - 0.5);
       
       const pool = document.getElementById('word-pool');
@@ -209,6 +327,15 @@
         btn.onclick = () => selectWord(word, index);
         pool.appendChild(btn);
       });
+    }
+
+    function updateMascotPosition() {
+      const mascot = document.getElementById('mascot');
+      const trackerWidth = document.getElementById('tracker').clientWidth - 70; // минус ширина птички и отступы
+      // Вычисляем процент прохождения
+      const progress = currentLevel / levels.length;
+      const newLeft = 15 + (trackerWidth - 40) * progress;
+      mascot.style.left = `${newLeft}px`;
     }
 
     function selectWord(word, index) {
@@ -233,41 +360,55 @@
 
     function checkAnswer() {
       const currentTarget = levels[currentLevel].target;
+      const mascot = document.getElementById('mascot');
       
       if (JSON.stringify(selectedWords) === JSON.stringify(currentTarget)) {
-        // Успех
-        document.getElementById('mascot').innerText = '🥳';
-        confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
+        // Успех: сова взлетает вверх!
+        mascot.classList.add('fly');
+        setTimeout(() => mascot.classList.remove('fly'), 600);
+
+        confetti({ particleCount: 60, spread: 70, origin: { y: 0.5 } });
         
         currentLevel++;
         if (currentLevel < levels.length) {
           setTimeout(() => {
-            document.getElementById('mascot').innerText = '🦉';
             initLevel();
-          }, 1000);
+          }, 800);
         } else {
+          // Долетаем до финального подарка
+          const trackerWidth = document.getElementById('tracker').clientWidth - 65;
+          mascot.style.left = `${trackerWidth}px`;
           showFinalScreen();
         }
       } else {
-        // Ошибка
-        document.getElementById('mascot').innerText = '😢';
-        tg.HapticFeedback.notificationOccurred('error'); // Легкий виброотклик
+        // Ошибка (грустный вибро-эффект)
+        mascot.innerText = '😢';
+        tg.HapticFeedback.notificationOccurred('error');
+        
+        // Тряска блока
+        const answerLine = document.getElementById('answer-line');
+        answerLine.style.transform = 'translateX(8px)';
+        setTimeout(() => answerLine.style.transform = 'translateX(-8px)', 100);
+        setTimeout(() => answerLine.style.transform = 'translateX(0)', 200);
+
         setTimeout(() => {
-          document.getElementById('mascot').innerText = '🦉';
-        }, 1200);
+          mascot.innerText = '🦉';
+        }, 1000);
       }
     }
 
     function showFinalScreen() {
-      document.getElementById('game-container').style.display = 'none';
-      document.getElementById('header').style.display = 'none';
-      document.getElementById('final-card').style.display = 'block';
-      
-      confetti({
-        particleCount: 150,
-        spread: 100,
-        origin: { y: 0.6 }
-      });
+      setTimeout(() => {
+        document.getElementById('game-container').style.display = 'none';
+        document.getElementById('tracker').style.display = 'none';
+        document.getElementById('final-card').style.display = 'block';
+        
+        confetti({
+          particleCount: 200,
+          spread: 120,
+          origin: { y: 0.5 }
+        });
+      }, 700);
     }
 
     initLevel();
