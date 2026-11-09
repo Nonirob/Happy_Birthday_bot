@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Happy Birthday!</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Feather', 'Segoe UI', Arial, sans-serif;
+    }
+    body {
+      background-color: #131f24;
+      color: #ffffff;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      justify-content: space-between;
+    }
+    .header {
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .progress-bar {
+      flex-grow: 1;
+      height: 16px;
+      background: #37464f;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: #58cc02;
+      transition: width 0.3s ease;
+    }
+    .mascot {
+      font-size: 50px;
+      text-align: center;
+      margin: 15px 0;
+    }
+    .prompt-box {
+      background: #202f36;
+      border: 2px solid #37464f;
+      border-radius: 16px;
+      padding: 15px;
+      text-align: center;
+      width: 100%;
+      max-width: 400px;
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+    .answer-line {
+      min-height: 60px;
+      border-bottom: 2px solid #37464f;
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 5px;
+      align-items: center;
+      margin-bottom: 25px;
+    }
+    .word-pool {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      width: 100%;
+      max-width: 400px;
+    }
+    .btn-word {
+      background: #202f36;
+      border: 2px solid #37464f;
+      border-bottom: 4px solid #37464f;
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.1s ease;
+    }
+    .btn-word:active {
+      transform: translateY(2px);
+      border-bottom-width: 2px;
+    }
+    .btn-word.used {
+      opacity: 0.2;
+      pointer-events: none;
+    }
+    .action-btn {
+      width: 100%;
+      max-width: 400px;
+      background: #58cc02;
+      border: none;
+      border-bottom: 4px solid #46a302;
+      color: white;
+      padding: 16px;
+      border-radius: 16px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-top: 20px;
+    }
+    .action-btn:active {
+      transform: translateY(2px);
+      border-bottom-width: 2px;
+    }
+    .final-card {
+      display: none;
+      text-align: center;
+      background: #202f36;
+      border-radius: 20px;
+      padding: 25px;
+      max-width: 400px;
+      border: 2px solid #58cc02;
+    }
+    .final-card h1 { color: #58cc02; margin-top: 0; }
+  </style>
+</head>
+<body>
+
+  <div class="header" id="header">
+    <span>❤️</span>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress"></div>
+    </div>
+  </div>
+
+  <div id="game-container" style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+    <div class="mascot" id="mascot">🦉</div>
+
+    <div class="prompt-box" id="prompt">
+      Переведи предложение на английский:
+      <div id="ru-text" style="font-weight: bold; margin-top: 8px; color: #1cb0f6;"></div>
+    </div>
+
+    <div class="answer-line" id="answer-line"></div>
+
+    <div class="word-pool" id="word-pool"></div>
+
+    <button class="action-btn" id="check-btn" onclick="checkAnswer()">Проверить</button>
+  </div>
+
+  <div class="final-card" id="final-card">
+    <div style="font-size: 60px;">🎉🎂🥳</div>
+    <h1>С Днём Рождения!</h1>
+    <p style="font-size: 18px; line-height: 1.5;">
+      Ты успешно прошла праздничный курс! ❤️<br><br>
+      Твой главный подарок ждёт тебя <b>на кухне</b> (горячий кофе и вкусный завтрак уже готовы)!
+    </p>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.expand(); // Разворачиваем на весь экран
+
+    const levels = [
+      {
+        ru: "Ты самая красивая женщина в мире",
+        target: ["You", "are", "the", "most", "beautiful", "woman", "in", "the", "world"],
+        extraWords: ["cat", "always", "nice"]
+      },
+      {
+        ru: "Каждый день с тобой — прекрасное благословение",
+        target: ["Every", "day", "with", "you", "is", "a", "wonderful", "blessing"],
+        extraWords: ["happy", "sun", "big"]
+      },
+      {
+        ru: "С днем рождения мою невероятную жену",
+        target: ["Happy", "Birthday", "to", "my", "incredible", "wife"],
+        extraWords: ["love", "best", "star"]
+      }
+    ];
+
+    let currentLevel = 0;
+    let selectedWords = [];
+
+    function initLevel() {
+      const level = levels[currentLevel];
+      document.getElementById('ru-text').innerText = `"${level.ru}"`;
+      document.getElementById('answer-line').innerHTML = '';
+      document.getElementById('progress').style.width = `${(currentLevel / levels.length) * 100}%`;
+      selectedWords = [];
+
+      // Собираем все слова и перемешиваем
+      const allWords = [...level.target, ...level.extraWords].sort(() => Math.random() - 0.5);
+      
+      const pool = document.getElementById('word-pool');
+      pool.innerHTML = '';
+      allWords.forEach((word, index) => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-word';
+        btn.innerText = word;
+        btn.id = `word-${index}`;
+        btn.onclick = () => selectWord(word, index);
+        pool.appendChild(btn);
+      });
+    }
+
+    function selectWord(word, index) {
+      const btn = document.getElementById(`word-${index}`);
+      btn.classList.add('used');
+
+      const ansBtn = document.createElement('button');
+      ansBtn.className = 'btn-word';
+      ansBtn.innerText = word;
+      ansBtn.onclick = () => deselectWord(ansBtn, btn, word);
+
+      document.getElementById('answer-line').appendChild(ansBtn);
+      selectedWords.push(word);
+    }
+
+    function deselectWord(ansBtn, originalBtn, word) {
+      ansBtn.remove();
+      originalBtn.classList.remove('used');
+      const idx = selectedWords.indexOf(word);
+      if (idx > -1) selectedWords.splice(idx, 1);
+    }
+
+    function checkAnswer() {
+      const currentTarget = levels[currentLevel].target;
+      
+      if (JSON.stringify(selectedWords) === JSON.stringify(currentTarget)) {
+        // Успех
+        document.getElementById('mascot').innerText = '🥳';
+        confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
+        
+        currentLevel++;
+        if (currentLevel < levels.length) {
+          setTimeout(() => {
+            document.getElementById('mascot').innerText = '🦉';
+            initLevel();
+          }, 1000);
+        } else {
+          showFinalScreen();
+        }
+      } else {
+        // Ошибка
+        document.getElementById('mascot').innerText = '😢';
+        tg.HapticFeedback.notificationOccurred('error'); // Легкий виброотклик
+        setTimeout(() => {
+          document.getElementById('mascot').innerText = '🦉';
+        }, 1200);
+      }
+    }
+
+    function showFinalScreen() {
+      document.getElementById('game-container').style.display = 'none';
+      document.getElementById('header').style.display = 'none';
+      document.getElementById('final-card').style.display = 'block';
+      
+      confetti({
+        particleCount: 150,
+        spread: 100,
+        origin: { y: 0.6 }
+      });
+    }
+
+    initLevel();
+  </script>
+</body>
+</html>
