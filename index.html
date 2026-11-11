@@ -434,7 +434,7 @@ function drawBouquet(x,y,s){
   c.restore();
 }
 function drawGirl(x,y,o){
-  const C=CFG.girl, t=o.t, ph=t*15, running=o.run && !o.air;
+  const C=CFG.girl, t=o.t, ph=o.ph||0, running=o.run && !o.air;
   const bob = running ? -Math.abs(Math.sin(ph))*2.5 : (o.air ? 0 : Math.sin(t*2.5)*.5);
   const sq=o.sq||0;
   c.save(); c.translate(x,y); c.scale(o.face*(1+sq*.22), 1-sq*.22);
@@ -532,14 +532,17 @@ function drawIvan(x,y,o){
   c.restore();
 }
 function drawMia(x,y,o){
-  const C=CFG.mia, t=o.t, mv=o.moving, ph=t*16;
+  const C=CFG.mia, t=o.t, m=o.mv||0, ph=o.ph||0;
   c.save(); c.translate(x,y); c.scale(o.face||1,1); c.lineCap='round';
-  c.translate(0, mv ? -Math.abs(Math.sin(ph))*1.6 : 0);
-  const tw=Math.sin(t*(mv?8:3))*4;
-  c.strokeStyle=C.fur; c.lineWidth=7; c.beginPath(); c.moveTo(-10,-11); c.quadraticCurveTo(-21,-14,-18+tw,-27); c.stroke();
-  c.strokeStyle=C.stripe; c.lineWidth=7; c.setLineDash([2.5,3.5]); c.beginPath(); c.moveTo(-10,-11); c.quadraticCurveTo(-21,-14,-18+tw,-27); c.stroke(); c.setLineDash([]);
-  disc(-18+tw,-27,3.6,C.stripe);
-  const l1 = mv ? Math.sin(ph)*3.2 : 0;
+  c.translate(0, -Math.abs(Math.sin(ph))*1.4*m);
+  // хвост: плавное покачивание (смешение «бег» / «покой»), полоски в фиксированных точках кривой
+  const tw = lerp(Math.sin(t*2.2)*4, Math.sin(ph*.5)*2.2, m), tl = lerp(0, 3, m);
+  const p0x=-10,p0y=-11, cpx=-21-tl,cpy=-14+tl*.5, p2x=-18+tw-tl*1.5,p2y=-27+tl*2;
+  const qb=(u)=>[(1-u)*(1-u)*p0x+2*(1-u)*u*cpx+u*u*p2x, (1-u)*(1-u)*p0y+2*(1-u)*u*cpy+u*u*p2y];
+  c.strokeStyle=C.fur; c.lineWidth=7; c.beginPath(); c.moveTo(p0x,p0y); c.quadraticCurveTo(cpx,cpy,p2x,p2y); c.stroke();
+  for (const u of [.32,.56,.78]){ const [sx,sy]=qb(u); disc(sx,sy,2.2,C.stripe); }
+  disc(p2x,p2y,3.6,C.stripe);
+  const l1 = Math.sin(ph)*3.2*m;
   limb(-7,-6,-7+l1,-1,3.2,C.stripe); limb(6,-6,6-l1,-1,3.2,C.stripe);
   limb(-4,-6,-4-l1,-1,3.2,C.fur); limb(9,-6,9+l1,-1,3.2,C.fur);
   ell(0,-10,12.5,7.8,0,C.fur);
@@ -657,6 +660,7 @@ const ivan = { hug:false, bouquet:true };
 const hist = [];
 const parts=[], sparts=[];
 
+function onGroundTol(x,tol){ for (const s of L.segs) if (x>=s[0]-tol && x<=s[1]+tol) return true; return false; }
 function onGround(x){ for (const s of L.segs) if (x>=s[0] && x<=s[1]) return true; return false; }
 function loadLevel(i){
   li=i; L=build(LV[i]);
@@ -747,15 +751,21 @@ function tapJump(){
 }
 function land(){ if (P.vy>320){ P.sq=Math.min(.9,P.vy/1000); dust(P.x,P.y); } P.vy=0; P.ground=true; P.jumps=0; P.coy=0; if (P.buf>0) doJump(true); }
 function startRescue(){
-  let nx=null; for (const s of L.segs) if (s[0]>P.x-10){ nx=s[0]; break; }
-  if (nx===null) nx=P.x+100;
-  P.rescue={t:0,x0:P.x,y0:P.y,x1:nx+40,y1:-12}; P.vy=0; AU.sfx('cloud'); haptic('warning');
-  if (!flags.rescue){ flags.rescue=1; say('Ой! Не страшно — облачко всегда тебя поймает ☁️💕',3.4); }
+  let prev=null, next=null;
+  for (const s of L.segs){ if (s[1]<=P.x+12) prev=s; else if (!next && s[0]>P.x-12) next=s; }
+  flags.fails=flags.fails||{};
+  const key=li+':'+(prev?prev[1]:0), n=flags.fails[key]=(flags.fails[key]||0)+1;
+  const back = prev && n<3;
+  const x1 = back ? Math.max(prev[0]+20, prev[1]-120) : (next?next[0]:P.x+100)+40;
+  P.rescue={t:0,x0:P.x,y0:P.y,x1,y1:-12,dur:clamp(Math.abs(x1-P.x)/150,1,1.6)}; P.vy=0; P.jumps=0;
+  AU.sfx('cloud'); haptic('warning');
+  bq=[]; say(back ? (n===1?'Ой! Облачко вернёт тебя назад — попробуй ещё разок ☁️💕':'Почти! Тапни прямо у края 💪') : 'Держись! Облачко перенесёт тебя ☁️',3.2);
+  if (li===0 && !flags.gapDone) flags.gapHint=0;
 }
 function updatePlayer(dt){
   P.t+=dt;
   if (P.rescue){
-    const r=P.rescue; r.t+=dt; const k=Math.min(1,r.t/1.3), e=ease(k);
+    const r=P.rescue; r.t+=dt; const k=Math.min(1,r.t/(r.dur||1.3)), e=ease(k);
     P.x=lerp(r.x0,r.x1,e); P.y=lerp(r.y0,r.y1,e)-Math.sin(k*Math.PI)*50;
     if (k>=1){ P.rescue=null; P.vy=0; P.ground=false; P.jumps=1; }
     return;
@@ -763,12 +773,19 @@ function updatePlayer(dt){
   const moving = (!P.stop && (P.spd??1)>.05) || P.walk;
   const hold = li===0 && flags.tut>0 && flags.tut<3;
   P.spd = hold ? 0 : Math.min(1,(P.spd??1)+dt*.8);
-  if (!P.stop) P.x += SPEED*P.spd*dt;
+  const sp = P.stop ? (P.walk?SPEED*.5:0) : SPEED*P.spd;
+  P.ph = (P.ph||0) + sp*dt*.1;
+  if (!P.stop){
+    const nx = P.x + SPEED*P.spd*dt;
+    // ниже кромки — упираемся в стенку, а не проходим сквозь землю
+    if (!(P.y>26 && !onGroundTol(P.x,8) && onGroundTol(nx,8))) P.x = nx;
+  }
   const py=P.y; P.vy+=G*dt; P.y+=P.vy*dt;
   const was=P.ground; P.ground=false;
   if (P.vy>=0){
-    if (onGround(P.x) && py<=.5 && P.y>=0){ P.y=0; land(); }
-    else for (const p of L.plats){ if (P.x>p.x-6 && P.x<p.x+p.w+6 && py<=p.y+.5 && P.y>=p.y){ P.y=p.y; land(); break; } }
+    // прощаем приземление на самый край (±10px) и чуть ниже кромки (до 26px)
+    if (onGroundTol(P.x,10) && py<=26 && P.y>=0){ P.y=0; land(); }
+    else for (const p of L.plats){ if (P.x>p.x-10 && P.x<p.x+p.w+10 && py<=p.y+12 && P.y>=p.y){ P.y=p.y; land(); break; } }
   }
   if (!P.ground){ P.coy += was?0:dt; } 
   if (P.buf>0) P.buf-=dt;
@@ -778,18 +795,25 @@ function updatePlayer(dt){
       for (let i=0;i<10;i++) spawn(parts,{x:s.x+(Math.random()-.5)*20,y:-14,vx:(Math.random()-.5)*120,vy:-80-Math.random()*120,g:300,life:.7,max:.7,size:3,col:'#ff9cc0',type:'heart'});
       if (!flags.spring){ flags.spring=1; say('Вжух! Цветочек подбрасывает высоко 🌸',3); } }
   }
-  if (P.y>150) startRescue();
+  if (P.y>110) startRescue();
   P.sq *= Math.pow(.002,dt);
   if (moving && P.ground){ P.trail-=dt; if (P.trail<=0){ P.trail=.09; spawn(parts,{x:P.x-6,y:P.y-6,vx:-20,vy:-20,life:.6,max:.6,size:2,col:'rgba(255,200,225,.9)',type:'spark'}); } }
 }
 function updateMia(dt){
   hist.push({x:P.x,y:P.y,t:clock});
   while (hist.length>2 && hist[0].t<clock-.7) hist.shift();
-  let h=hist[0]; for (let i=hist.length-1;i>=0;i--){ if (hist[i].t<=clock-.25){ h=hist[i]; break; } }
-  const tx = (state==='finale' ? P.x-46 : h.x-38);
-  mia.moving = Math.abs(tx-mia.x)>.4;
+  const tt=clock-.25; let a=hist[0], b=hist[0];
+  for (let i=hist.length-1;i>=0;i--){ if (hist[i].t<=tt){ a=hist[i]; b=hist[Math.min(i+1,hist.length-1)]; break; } }
+  const k = b.t>a.t ? clamp((tt-a.t)/(b.t-a.t),0,1) : 0;
+  const hx=lerp(a.x,b.x,k), hy=lerp(a.y,b.y,k);
+  const tx = (state==='finale' ? P.x-46 : hx-38);
+  const ox=mia.x;
   mia.x = state==='finale' ? lerp(mia.x,tx,Math.min(1,dt*3)) : tx;
-  mia.y = state==='finale' ? 0 : Math.min(h.y, onGround(mia.x)?0:h.y);
+  const ty = state==='finale' ? 0 : Math.min(hy, onGround(mia.x)?0:hy);
+  mia.y = lerp(mia.y, ty, Math.min(1,dt*18));
+  const v = dt>0 ? Math.abs(mia.x-ox)/dt : 0;
+  mia.mv = lerp(mia.mv||0, v>20?1:0, Math.min(1,dt*6));
+  mia.ph = (mia.ph||0) + Math.abs(mia.x-ox)*.11;
 }
 
 /* ---------- Сбор предметов ---------- */
@@ -1353,8 +1377,8 @@ function render(dt){
   drawGround(); L.plats.forEach(drawPlat); drawDecor(); if (!L.final) drawGate(); L.springs.forEach(drawSpring); drawItems();
   if (L.final){ shadow(L.ivanX,0); drawIvan(L.ivanX-camX,GY,{t:T,face:-1,hug:ivan.hug,bouquet:ivan.bouquet,happy:ivan.hug}); }
   shadow(mia.x,mia.y); shadow(P.x,P.y);
-  drawMia(mia.x-camX,mia.y+GY,{t:T,moving:mia.moving && state!=='finale',face:1,happy:state==='finale'||state==='letter'});
-  drawGirl(P.x-camX,P.y+GY,{t:P.t,face:1,run:((!P.stop&&(P.spd??1)>.05)||P.walk),air:!P.ground&&!P.rescue,vy:P.vy,sq:P.sq,hug:P.hug,bouquet:P.bouquet,happy:P.hug||state==='letter',lean:P.hug?.12:0});
+  drawMia(mia.x-camX,mia.y+GY,{t:T,mv:state==='finale'||state==='letter'?0:mia.mv,ph:mia.ph,face:1,happy:state==='finale'||state==='letter'});
+  drawGirl(P.x-camX,P.y+GY,{t:P.t,ph:P.ph,face:1,run:((!P.stop&&(P.spd??1)>.05)||P.walk),air:!P.ground&&!P.rescue,vy:P.vy,sq:P.sq,hug:P.hug,bouquet:P.bouquet,happy:P.hug||state==='letter',lean:P.hug?.12:0});
   if (P.rescue){ cloudShape(P.x-camX-24,P.y+GY+8,40,'rgba(255,255,255,.95)'); }
   for (const p of parts) drawPart(p,camX,GY);
   if (skyStars){ skyStars.t+=dt; drawStarText(skyStars,skyStars.t,!skyStars.lerp); }
@@ -1378,8 +1402,10 @@ function update(dt){
     camX += (tx-camX)*Math.min(1,dt*5);
   }
 }
+let dtS=1/60;
 function loop(ts){
-  const now=ts/1000, dt=Math.min(.033, last?now-last:.016); last=now; T+=dt;
+  const now=ts/1000, raw=Math.min(.05, last?now-last:.016); last=now;
+  dtS += (raw-dtS)*.3; const dt=Math.min(.033, dtS); T+=dt;
   update(dt); render(dt);
   requestAnimationFrame(loop);
 }
