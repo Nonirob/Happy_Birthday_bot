@@ -208,7 +208,7 @@ button:focus-visible{outline:3px solid #ffd36e;outline-offset:2px}
 const CFG = {
   name: 'Оксана',
   sign: 'Твой Ваня',
-  girl: { hair:'#a46a43', hairDark:'#8a5534', hairHi:'#d29a6c', skin:'#ffdcc8', dress:'#ff86b2', dressHi:'#ffc4da', shoes:'#e8578a' },
+  girl: { eye:'#4f9e6a', eyeDark:'#2f6b45', hair:'#a46a43', hairDark:'#8a5534', hairHi:'#d29a6c', skin:'#ffdcc8', dress:'#ff86b2', dressHi:'#ffc4da', shoes:'#e8578a' },
   ivan: { hair:'#2a211e', skin:'#f6d2bd', suit:'#bccbc0', suitDark:'#9fb1a5', tie:'#18b3a3' },
   mia:  { fur:'#7a6553', furLight:'#9a8470', stripe:'#3d3129', belly:'#efe8de', eye:'#d6c25a' }   // цвет кошки Мии
 };
@@ -487,8 +487,17 @@ function drawGirl(x,y,o){
     c.beginPath(); c.arc(1.5,-45,2.3,Math.PI*1.15,Math.PI*1.85); c.stroke();
   } else {
     const blink = Math.sin(t*1.3+1)>.985 ? .35 : 2.7;
-    ell(8,-46,1.8,blink,0,'#3b2430'); ell(1.5,-46,1.8,blink,0,'#3b2430');
-    if (blink>1){ disc(8.6,-47.2,.75,'#fff'); disc(2.1,-47.2,.75,'#fff'); }
+    if (blink>1){
+      for (const ex of [8,1.5]){
+        ell(ex,-46,2.1,2.9,0,C.eyeDark);
+        ell(ex,-45.8,1.7,2.4,0,C.eye);
+        ell(ex+.15,-45.6,.95,1.5,0,'#1f2a22');
+        disc(ex+.75,-47.1,.75,'#fff'); disc(ex-.6,-44.9,.35,'rgba(255,255,255,.8)');
+      }
+      c.strokeStyle='#3b2430'; c.lineWidth=1.1;
+      c.beginPath(); c.arc(8,-46,2.3,Math.PI*1.15,Math.PI*1.9); c.stroke();
+      c.beginPath(); c.arc(1.5,-46,2.3,Math.PI*1.1,Math.PI*1.85); c.stroke();
+    } else { ell(8,-46,1.9,.4,0,'#3b2430'); ell(1.5,-46,1.9,.4,0,'#3b2430'); }
   }
   ell(10.8,-41.6,2.6,1.6,0,'rgba(255,110,150,.45)'); ell(-1.2,-41.6,2.6,1.6,0,'rgba(255,110,150,.45)');
   c.strokeStyle='#c2506f'; c.lineWidth=1.3; c.beginPath(); c.arc(5.4,-41.5,2,.15*Math.PI,.85*Math.PI); c.stroke();
